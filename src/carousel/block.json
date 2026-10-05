@@ -1,0 +1,86 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "hlb/carousel",
+	"version": "0.1.0",
+	"title": "Carousel",
+	"category": "design",
+	"icon": "slides",
+	"description": "Slides in a scroll-snap track, with arrows, markers and optional autoplay.",
+	"keywords": [ "slider", "slides", "carousel", "gallery" ],
+	"textdomain": "hlb-carousel",
+	"attributes": {
+		"label": {
+			"type": "string",
+			"default": ""
+		},
+		"perView": {
+			"type": "number",
+			"default": 3
+		},
+		"perViewTablet": {
+			"type": "number",
+			"default": 2
+		},
+		"perViewMobile": {
+			"type": "number",
+			"default": 1
+		},
+		"snapAlign": {
+			"type": "string",
+			"enum": [ "start", "center" ],
+			"default": "start"
+		},
+		"oneAtATime": {
+			"type": "boolean",
+			"default": true
+		},
+		"showArrows": {
+			"type": "boolean",
+			"default": true
+		},
+		"arrowPlacement": {
+			"type": "string",
+			"enum": [ "overlay", "outside", "below", "top" ],
+			"default": "overlay"
+		},
+		"showMarkers": {
+			"type": "boolean",
+			"default": true
+		},
+		"markerStyle": {
+			"type": "string",
+			"enum": [ "dots", "numbers", "labels" ],
+			"default": "dots"
+		},
+		"markerPosition": {
+			"type": "string",
+			"enum": [ "before", "after" ],
+			"default": "after"
+		},
+		"autoplay": {
+			"type": "boolean",
+			"default": false
+		},
+		"interval": {
+			"type": "number",
+			"default": 6
+		}
+	},
+	"supports": {
+		"anchor": true,
+		"align": [ "wide", "full" ],
+		"html": false,
+		"interactivity": true,
+		"spacing": {
+			"margin": true,
+			"blockGap": true,
+			"__experimentalSkipSerialization": [ "blockGap" ]
+		}
+	},
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css",
+	"viewScriptModule": "file:./view.js",
+	"render": "file:./render.php"
+}

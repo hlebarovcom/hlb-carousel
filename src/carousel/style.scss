@@ -1,0 +1,470 @@
+/* stylelint-disable no-descending-specificity -- Placement rules come after the base rules. */
+
+/**
+ * Carousel. The wrapper is a grid; the track, the CSS scroll buttons and
+ * marker group (generated as the track's siblings) and the fallback controls
+ * all sit in its named areas. Themes restyle through the custom properties.
+ */
+
+/* stylelint-disable-next-line @stylistic/max-line-length -- Icon data URI. */
+$chevron-left: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%231e1e1e' d='M15 3.8 16.2 5l-7 7 7 7-1.2 1.2L6.8 12z'/%3E%3C/svg%3E";
+/* stylelint-disable-next-line @stylistic/max-line-length -- Icon data URI. */
+$chevron-right: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%231e1e1e' d='M9 3.8 17.2 12 9 20.2 7.8 19l7-7-7-7z'/%3E%3C/svg%3E";
+
+// Control and marker looks, shared by the CSS controls and the fallback.
+@mixin button {
+	box-sizing: border-box;
+	display: block;
+	width: var( --hlb-carousel-button-size );
+	height: var( --hlb-carousel-button-size );
+	padding: 0;
+	cursor: pointer;
+	background-color: var( --hlb-carousel-button-background );
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: var( --hlb-carousel-icon-size );
+	border: var( --hlb-carousel-button-border );
+	border-radius: var( --hlb-carousel-button-radius );
+	box-shadow: var( --hlb-carousel-button-shadow );
+}
+
+@mixin button-hover {
+	background-color: var( --hlb-carousel-button-hover-background );
+	border-color: var( --hlb-carousel-button-hover-border-color );
+}
+
+@mixin button-disabled {
+	cursor: default;
+	opacity: var( --hlb-carousel-button-disabled-opacity );
+}
+
+@mixin focus {
+	outline: var( --hlb-carousel-focus-width ) solid var( --hlb-carousel-focus-color );
+	outline-offset: var( --hlb-carousel-focus-offset );
+}
+
+@mixin marker {
+	box-sizing: border-box;
+	display: inline-grid;
+	place-items: center;
+	min-width: var( --hlb-carousel-marker-size );
+	min-height: 0;
+	height: var( --hlb-carousel-marker-size );
+	padding: 0;
+	font: inherit;
+	font-size: var( --hlb-carousel-marker-font-size );
+	line-height: 1;
+	color: var( --hlb-carousel-marker-color );
+	text-decoration: none;
+	cursor: pointer;
+	background: transparent;
+	border: var( --hlb-carousel-marker-border-width ) solid var( --hlb-carousel-marker-color );
+	border-radius: var( --hlb-carousel-marker-radius );
+}
+
+@mixin marker-current {
+	color: var( --hlb-carousel-marker-active-text );
+	background: var( --hlb-carousel-marker-active-color );
+	border-color: var( --hlb-carousel-marker-active-color );
+}
+
+@mixin marker-text {
+	min-width: var( --hlb-carousel-marker-text-size );
+	height: var( --hlb-carousel-marker-text-size );
+	padding: 0 0.5em;
+}
+
+@mixin markers {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var( --hlb-carousel-marker-gap );
+	justify-content: center;
+}
+
+.wp-block-hlb-carousel {
+	--hlb-carousel-gap: 1rem;
+	--hlb-carousel-control-gap: 0.75rem;
+	--hlb-carousel-button-size: 44px;
+	--hlb-carousel-button-background: #fff;
+	--hlb-carousel-button-hover-background: #f0f0f0;
+	--hlb-carousel-button-border: 1px solid #757575;
+	--hlb-carousel-button-hover-border-color: #1e1e1e;
+	--hlb-carousel-button-radius: 0;
+	--hlb-carousel-button-shadow: none;
+	--hlb-carousel-button-disabled-opacity: 0.35;
+	--hlb-carousel-icon-size: 20px;
+	--hlb-carousel-icon-prev: url( "#{$chevron-left}" );
+	--hlb-carousel-icon-next: url( "#{$chevron-right}" );
+	--hlb-carousel-marker-size: 12px;
+	--hlb-carousel-marker-text-size: 32px;
+	--hlb-carousel-marker-font-size: 0.875rem;
+	--hlb-carousel-marker-gap: 0.75rem; // 12px markers 24px apart (WCAG 2.5.8)
+	--hlb-carousel-marker-border-width: 1px;
+	--hlb-carousel-marker-radius: 0;
+	--hlb-carousel-marker-color: #757575;
+	--hlb-carousel-marker-active-color: #1e1e1e;
+	--hlb-carousel-marker-active-text: #fff;
+	--hlb-carousel-focus-width: 3px;
+	--hlb-carousel-focus-color: #2271b1;
+	--hlb-carousel-focus-offset: 2px;
+
+	position: relative;
+	box-sizing: border-box;
+	display: grid;
+	grid-template-areas:
+		"before"
+		"track"
+		"after";
+	grid-template-columns: minmax( 0, 1fr );
+	gap: var( --hlb-carousel-control-gap );
+	container: hlb-carousel / inline-size;
+}
+
+// Arrow placements.
+.wp-block-hlb-carousel.is-arrows-outside {
+	grid-template-areas:
+		". before ."
+		"prev track next"
+		". after .";
+	grid-template-columns: auto minmax( 0, 1fr ) auto;
+}
+
+.wp-block-hlb-carousel.is-arrows-below {
+	grid-template-areas:
+		"before before before"
+		"track track track"
+		"prev after next";
+	grid-template-columns: auto minmax( 0, 1fr ) auto;
+
+	// Separate rules: a browser without ::scroll-button() drops any rule naming it.
+	> .hlb-carousel__track::scroll-button(inline-start) {
+		justify-self: start;
+	}
+
+	> .hlb-carousel__track::scroll-button(inline-end) {
+		justify-self: end;
+	}
+
+	> .hlb-carousel__button--prev {
+		justify-self: start;
+	}
+
+	> .hlb-carousel__button--next {
+		justify-self: end;
+	}
+}
+
+.wp-block-hlb-carousel.is-arrows-top {
+	grid-template-areas:
+		"before prev next"
+		"track track track"
+		"after after after";
+	grid-template-columns: minmax( 0, 1fr ) auto auto;
+}
+
+// The track.
+.hlb-carousel__track {
+	--hlb-per-view: var( --hlb-carousel-per-view, 1 );
+	--hlb-gaps: calc( (var( --hlb-per-view ) - 1) * var( --hlb-carousel-gap ) );
+
+	position: relative;
+	display: grid;
+	grid-area: track;
+	grid-auto-columns: calc( (100% - var( --hlb-gaps )) / var( --hlb-per-view ) );
+	grid-auto-flow: column;
+	gap: var( --hlb-carousel-gap );
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scroll-behavior: smooth;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+	counter-reset: hlb-carousel-slide;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+
+	&:focus-visible {
+		@include focus;
+	}
+}
+
+@container hlb-carousel (width < 1024px) {
+	.hlb-carousel__track {
+		--hlb-per-view: var( --hlb-carousel-per-view-tablet, var( --hlb-carousel-per-view, 1 ) );
+	}
+}
+
+@container hlb-carousel (width < 600px) {
+	.hlb-carousel__track {
+		--hlb-per-view: var( --hlb-carousel-per-view-mobile, 1 );
+	}
+}
+
+.hlb-carousel__slide {
+	box-sizing: border-box;
+	min-width: 0;
+	scroll-snap-align: start;
+	counter-increment: hlb-carousel-slide;
+}
+
+.is-snap-center > .hlb-carousel__track > .hlb-carousel__slide {
+	scroll-snap-align: center;
+}
+
+.is-one-at-a-time > .hlb-carousel__track > .hlb-carousel__slide {
+	scroll-snap-stop: always;
+}
+
+// CSS scroll buttons (Chrome and Edge 135+).
+.wp-block-hlb-carousel.has-arrows > .hlb-carousel__track {
+	&::scroll-button(inline-start) {
+		grid-area: prev;
+		content: "" / attr( data-label-prev );
+		background-image: var( --hlb-carousel-icon-prev );
+	}
+
+	&::scroll-button(inline-end) {
+		grid-area: next;
+		content: "" / attr( data-label-next );
+		background-image: var( --hlb-carousel-icon-next );
+	}
+
+	&::scroll-button(*) {
+		@include button;
+		align-self: center;
+	}
+
+	&::scroll-button(*):hover:not(:disabled) {
+		@include button-hover;
+	}
+
+	&::scroll-button(inline-start):hover:not(:disabled) {
+		background-image: var( --hlb-carousel-icon-prev-hover, var( --hlb-carousel-icon-prev ) );
+	}
+
+	&::scroll-button(inline-end):hover:not(:disabled) {
+		background-image: var( --hlb-carousel-icon-next-hover, var( --hlb-carousel-icon-next ) );
+	}
+
+	&::scroll-button(*):disabled {
+		@include button-disabled;
+	}
+
+	&::scroll-button(*):focus-visible {
+		@include focus;
+	}
+}
+
+// CSS scroll markers.
+.wp-block-hlb-carousel.has-markers > .hlb-carousel__track {
+	// Chrome does not size the grid row from the markers, so the group sets its own height.
+	&::scroll-marker-group {
+		@include markers;
+		min-height: var( --hlb-markers-height, var( --hlb-carousel-marker-size ) );
+	}
+
+	> .hlb-carousel__slide::scroll-marker {
+		@include marker;
+		content: "" / attr( aria-label );
+	}
+
+	/* stylelint-disable-next-line selector-pseudo-class-no-unknown -- CSS Overflow 5. */
+	> .hlb-carousel__slide::scroll-marker:target-current {
+		@include marker-current;
+	}
+
+	> .hlb-carousel__slide::scroll-marker:focus-visible {
+		@include focus;
+	}
+}
+
+.wp-block-hlb-carousel.is-markers-before > .hlb-carousel__track {
+	scroll-marker-group: before;
+
+	&::scroll-marker-group {
+		grid-area: before;
+	}
+}
+
+.wp-block-hlb-carousel.is-markers-after > .hlb-carousel__track {
+	scroll-marker-group: after;
+
+	&::scroll-marker-group {
+		grid-area: after;
+	}
+}
+
+.wp-block-hlb-carousel:is(.is-markers-numbers, .is-markers-labels) > .hlb-carousel__track {
+	--hlb-markers-height: var( --hlb-carousel-marker-text-size );
+}
+
+.wp-block-hlb-carousel.is-markers-numbers > .hlb-carousel__track {
+	> .hlb-carousel__slide::scroll-marker {
+		@include marker-text;
+		content: counter( hlb-carousel-slide ) / attr( aria-label );
+	}
+}
+
+.wp-block-hlb-carousel.is-markers-labels > .hlb-carousel__track {
+	> .hlb-carousel__slide::scroll-marker {
+		@include marker-text;
+		content: attr( data-label ) / attr( aria-label );
+	}
+}
+
+// Fallback controls: shown only where CSS scroll buttons are missing, once the script runs.
+.wp-block-hlb-carousel .hlb-carousel__fallback {
+	display: none;
+}
+
+.hlb-carousel__button {
+	@include button;
+	align-self: center;
+
+	&:hover:not(:disabled) {
+		@include button-hover;
+	}
+
+	&:disabled {
+		@include button-disabled;
+	}
+
+	&:focus-visible {
+		@include focus;
+	}
+}
+
+.hlb-carousel__button--prev {
+	grid-area: prev;
+	background-image: var( --hlb-carousel-icon-prev );
+}
+
+.hlb-carousel__button--next {
+	grid-area: next;
+	background-image: var( --hlb-carousel-icon-next );
+}
+
+.hlb-carousel__button--prev:hover:not(:disabled) {
+	background-image: var( --hlb-carousel-icon-prev-hover, var( --hlb-carousel-icon-prev ) );
+}
+
+.hlb-carousel__button--next:hover:not(:disabled) {
+	background-image: var( --hlb-carousel-icon-next-hover, var( --hlb-carousel-icon-next ) );
+}
+
+.hlb-carousel__markers {
+	@include markers;
+	align-items: center;
+	padding: 0;
+	margin: 0;
+	list-style: none;
+
+	> li {
+		display: flex;
+		margin: 0;
+	}
+}
+
+.is-markers-before > .hlb-carousel__markers {
+	grid-area: before;
+}
+
+.is-markers-after > .hlb-carousel__markers {
+	grid-area: after;
+}
+
+.hlb-carousel__marker {
+	@include marker;
+
+	&[aria-current="true"] {
+		@include marker-current;
+	}
+
+	&:focus-visible {
+		@include focus;
+	}
+}
+
+.is-markers-numbers .hlb-carousel__marker,
+.is-markers-labels .hlb-carousel__marker {
+	@include marker-text;
+}
+
+@supports not selector(::scroll-button(inline-start)) {
+	.wp-block-hlb-carousel.is-ready > .hlb-carousel__button.hlb-carousel__fallback {
+		display: block;
+	}
+
+	.wp-block-hlb-carousel.is-ready > .hlb-carousel__markers.hlb-carousel__fallback {
+		display: flex;
+	}
+}
+
+// Arrow positions. Native and fallback selectors stay in separate rules: a
+// browser without ::scroll-button() drops any rule that mentions it.
+@mixin overlay-arrow {
+	z-index: 1;
+	grid-area: track;
+	margin-inline: var( --hlb-carousel-control-gap );
+}
+
+.wp-block-hlb-carousel.is-arrows-overlay {
+	> .hlb-carousel__track::scroll-button(*) {
+		@include overlay-arrow;
+	}
+
+	> .hlb-carousel__track::scroll-button(inline-start) {
+		justify-self: start;
+	}
+
+	> .hlb-carousel__track::scroll-button(inline-end) {
+		justify-self: end;
+	}
+
+	> .hlb-carousel__button {
+		@include overlay-arrow;
+	}
+
+	> .hlb-carousel__button--prev {
+		justify-self: start;
+	}
+
+	> .hlb-carousel__button--next {
+		justify-self: end;
+	}
+}
+
+// Pause button: over the track, at the end corner.
+.hlb-carousel__pause {
+	z-index: 1;
+	grid-area: track;
+	align-self: end;
+	justify-self: end;
+	min-height: 44px;
+	padding: 0 1rem;
+	margin: var( --hlb-carousel-control-gap );
+	font: inherit;
+	cursor: pointer;
+	background: var( --hlb-carousel-button-background );
+	border: var( --hlb-carousel-button-border );
+	border-radius: var( --hlb-carousel-button-radius );
+
+	&:hover {
+		@include button-hover;
+	}
+
+	&:focus-visible {
+		@include focus;
+	}
+
+	&[hidden] {
+		display: none;
+	}
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.hlb-carousel__track {
+		scroll-behavior: auto;
+	}
+}

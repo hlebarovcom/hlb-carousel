@@ -1,0 +1,21 @@
+{
+	"name": "hlebarovcom/hlb-carousel",
+	"description": "Carousel block built on CSS scroll snap, scroll buttons and scroll markers, with a script fallback and optional autoplay.",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"authors": [
+		{
+			"name": "Hlebarov.com",
+			"homepage": "https://hlebarov.com"
+		}
+	],
+	"require": {
+		"php": ">=8.1",
+		"composer/installers": "^2.0"
+	},
+	"config": {
+		"allow-plugins": {
+			"composer/installers": true
+		}
+	}
+}

@@ -1,0 +1,6 @@
+# Built files ship with the package: Composer installs do not run a build.
+/src export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore
+/.gitignore export-ignore
+/.gitattributes export-ignore
