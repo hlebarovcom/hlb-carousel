@@ -1,0 +1,210 @@
+name: Publish to SatisPress
+
+# SatisPress serves whatever is installed on packages.hlb.dev - it has no
+# upload API - so publishing a release means syncing the released files into
+# that site's plugins directory. packages.json is generated per request, so
+# nothing needs flushing afterwards.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish, e.g. v0.2.0."
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  PLUGIN_SLUG: hlb-carousel
+  PACKAGES_DEPLOY_USER: ${{ secrets.PACKAGES_DEPLOY_USER }}
+  PACKAGES_DEPLOY_HOST: ${{ secrets.PACKAGES_DEPLOY_HOST }}
+  PACKAGES_DEPLOY_PORT: ${{ secrets.PACKAGES_DEPLOY_PORT }}
+  PACKAGES_PLUGIN_PATH: ${{ secrets.PACKAGES_PLUGIN_PATH }}
+
+jobs:
+  publish:
+    name: Copy the release to packages.hlb.dev
+    runs-on: self-hosted
+
+    steps:
+      - name: Resolve the tag
+        id: tag
+        env:
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$TAG" ]; then
+            echo "No release tag to publish."
+            exit 1
+          fi
+
+          case "$TAG" in
+            *[!a-zA-Z0-9._-]*)
+              echo "Refusing tag '$TAG': only letters, numbers, dots, underscores and hyphens are allowed."
+              exit 1
+              ;;
+          esac
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the released code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Verify every version matches the tag
+        env:
+          EXPECTED: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          HEADER=$(sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//p' "$PLUGIN_SLUG.php" | head -1 | tr -d '[:space:]')
+          CONSTANT=$(sed -n "s/^const VERSION = '\([^']*\)';/\1/p" inc/namespace.php)
+          STABLE=$(sed -n 's/^Stable tag:[[:space:]]*//p' readme.txt | tr -d '[:space:]')
+          PACKAGE=$(jq -r .version package.json)
+
+          echo "tag: $EXPECTED  header: $HEADER  VERSION: $CONSTANT  stable tag: $STABLE  package.json: $PACKAGE"
+
+          # Composer resolves the version from the plugin header.
+          for found in "$HEADER" "$CONSTANT" "$STABLE" "$PACKAGE"; do
+            if [ "$found" != "$EXPECTED" ]; then
+              echo "Version mismatch: expected $EXPECTED everywhere. Bump all of them before tagging."
+              exit 1
+            fi
+          done
+
+          for block in build/*/block.json; do
+            if [ "$(jq -r .version "$block")" != "$EXPECTED" ]; then
+              echo "$block has version $(jq -r .version "$block"), expected $EXPECTED. Rebuild before tagging."
+              exit 1
+            fi
+          done
+
+      - name: Check the build output is present
+        run: |
+          set -euo pipefail
+          for path in build/carousel/index.js build/carousel/view.js build/carousel/style-index.css build/carousel/render.php build/carousel-slide/index.js build/carousel-slide/render.php; do
+            if [ ! -e "$path" ]; then
+              echo "Missing $path - this tag does not carry built assets, so the published package would be broken."
+              exit 1
+            fi
+          done
+
+      # git archive honours export-ignore in .gitattributes, so the package
+      # matches what Composer installs from the repository.
+      - name: Build the package
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          PACKAGE_DIR="$RUNNER_TEMP/$PLUGIN_SLUG"
+          rm -rf "${PACKAGE_DIR:?}"
+          mkdir -p "$PACKAGE_DIR"
+          git archive "$TAG" | tar -x -C "$PACKAGE_DIR"
+          rm -rf "$PACKAGE_DIR/.github"
+          echo "PACKAGE_DIR=$PACKAGE_DIR" >> "$GITHUB_ENV"
+
+      - name: Set up the deploy key
+        env:
+          PACKAGES_DEPLOY_KEY: ${{ secrets.PACKAGES_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          REPO_NAME=${GITHUB_REPOSITORY##*/}
+          echo "KEY_NAME=${REPO_NAME}_packages_key" >> "$GITHUB_ENV"
+
+          for required in PACKAGES_DEPLOY_USER PACKAGES_DEPLOY_HOST PACKAGES_DEPLOY_PORT PACKAGES_PLUGIN_PATH; do
+            if [ -z "${!required}" ]; then
+              echo "$required secret is required."
+              exit 1
+            fi
+          done
+
+          if [ -z "$PACKAGES_DEPLOY_KEY" ]; then
+            echo "PACKAGES_DEPLOY_KEY secret is required."
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$PACKAGES_DEPLOY_KEY" | tr -d '\r' > "$HOME/.ssh/${REPO_NAME}_packages_key"
+          chmod 600 "$HOME/.ssh/${REPO_NAME}_packages_key"
+
+          if ! ssh-keygen -y -f "$HOME/.ssh/${REPO_NAME}_packages_key" >/dev/null; then
+            echo "PACKAGES_DEPLOY_KEY is not a readable private key."
+            exit 1
+          fi
+
+      - name: Confirm the target is a plugins directory
+        run: |
+          set -euo pipefail
+          {
+            printf 'export PACKAGES_PLUGIN_PATH=%q\n' "$PACKAGES_PLUGIN_PATH"
+            printf 'export PLUGIN_SLUG=%q\n' "$PLUGIN_SLUG"
+            cat <<'EOF'
+          set -euo pipefail
+
+          if [ ! -d "$PACKAGES_PLUGIN_PATH" ]; then
+            echo "$PACKAGES_PLUGIN_PATH does not exist on the packages host."
+            exit 1
+          fi
+
+          # A plugins directory always has index.php; refuse to sync anywhere else.
+          if [ ! -f "$PACKAGES_PLUGIN_PATH/index.php" ]; then
+            echo "$PACKAGES_PLUGIN_PATH does not look like a wp-content/plugins directory."
+            exit 1
+          fi
+
+          mkdir -p "$PACKAGES_PLUGIN_PATH/$PLUGIN_SLUG"
+          EOF
+          } | ssh -i "$HOME/.ssh/$KEY_NAME" -p "$PACKAGES_DEPLOY_PORT" -o IdentitiesOnly=yes -o BatchMode=yes \
+              -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              "$PACKAGES_DEPLOY_USER@$PACKAGES_DEPLOY_HOST" "bash -s"
+
+      - name: Sync the plugin
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -i $HOME/.ssh/$KEY_NAME -p $PACKAGES_DEPLOY_PORT -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+            "$PACKAGE_DIR/" "$PACKAGES_DEPLOY_USER@$PACKAGES_DEPLOY_HOST:$PACKAGES_PLUGIN_PATH/$PLUGIN_SLUG/"
+
+      - name: Verify the published version
+        env:
+          EXPECTED: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            printf 'export PACKAGES_PLUGIN_PATH=%q\n' "$PACKAGES_PLUGIN_PATH"
+            printf 'export PLUGIN_SLUG=%q\n' "$PLUGIN_SLUG"
+            printf 'export EXPECTED=%q\n' "$EXPECTED"
+            cat <<'EOF'
+          set -euo pipefail
+
+          PLUGIN_FILE="$PACKAGES_PLUGIN_PATH/$PLUGIN_SLUG/$PLUGIN_SLUG.php"
+          PUBLISHED=$(sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//p' "$PLUGIN_FILE" | head -1 | tr -d '[:space:]')
+
+          if [ "$PUBLISHED" != "$EXPECTED" ]; then
+            echo "Published version is $PUBLISHED but $EXPECTED was expected."
+            exit 1
+          fi
+
+          if [ -e "$PACKAGES_PLUGIN_PATH/$PLUGIN_SLUG/src" ]; then
+            echo "src/ must not ship with the package."
+            exit 1
+          fi
+
+          echo "packages.hlb.dev now carries $PLUGIN_SLUG $PUBLISHED"
+          EOF
+          } | ssh -i "$HOME/.ssh/$KEY_NAME" -p "$PACKAGES_DEPLOY_PORT" -o IdentitiesOnly=yes -o BatchMode=yes \
+              -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              "$PACKAGES_DEPLOY_USER@$PACKAGES_DEPLOY_HOST" "bash -s"
+
+      - name: Clean up
+        if: always()
+        run: |
+          if [ -n "${KEY_NAME:-}" ]; then rm -f "$HOME/.ssh/$KEY_NAME"; fi
+          rm -rf "${RUNNER_TEMP:?}/${PLUGIN_SLUG:?}"
