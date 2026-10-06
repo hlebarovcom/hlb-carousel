@@ -5,7 +5,7 @@
  * Where the browser supports CSS scroll buttons and scroll markers, CSS draws
  * the arrows and markers. The buttons and list below are the fallback for
  * other browsers; the stylesheet shows them only there, once the view script
- * is running. The pause button exists only when autoplay is on.
+ * is running. The pause button exists only when autoplay and its toggle are on.
  *
  * @package HLB\Carousel
  *
@@ -23,6 +23,7 @@ if ( ! $hlb_count ) {
 $hlb_arrows   = ! empty( $attributes['showArrows'] );
 $hlb_markers  = ! empty( $attributes['showMarkers'] );
 $hlb_autoplay = ! empty( $attributes['autoplay'] );
+$hlb_pause    = $hlb_autoplay && ! empty( $attributes['showPause'] );
 $hlb_style    = in_array( $attributes['markerStyle'] ?? '', [ 'dots', 'numbers', 'labels' ], true ) ? $attributes['markerStyle'] : 'dots';
 $hlb_position = 'before' === ( $attributes['markerPosition'] ?? '' ) ? 'before' : 'after';
 $hlb_place    = in_array( $attributes['arrowPlacement'] ?? '', [ 'overlay', 'outside', 'below', 'top' ], true ) ? $attributes['arrowPlacement'] : 'overlay';
@@ -31,6 +32,7 @@ $hlb_classes = array_filter(
 	[
 		$hlb_arrows ? 'has-arrows' : '',
 		$hlb_arrows ? 'is-arrows-' . $hlb_place : '',
+		$hlb_arrows && 'overlay' === $hlb_place && ! empty( $attributes['arrowsOnHover'] ) ? 'is-arrows-on-hover' : '',
 		$hlb_markers ? 'has-markers' : '',
 		$hlb_markers ? 'is-markers-' . $hlb_position : '',
 		$hlb_markers ? 'is-markers-' . $hlb_style : '',
@@ -141,7 +143,7 @@ $hlb_marker_list = static function () use ( $hlb_labels, $hlb_style ): void {
 	<?php if ( $hlb_markers && 'after' === $hlb_position ) : ?>
 		<?php $hlb_marker_list(); ?>
 	<?php endif; ?>
-	<?php if ( $hlb_autoplay ) : ?>
+	<?php if ( $hlb_pause ) : ?>
 		<button type="button" class="hlb-carousel__pause" hidden data-wp-bind--hidden="!context.ready" data-wp-class--is-paused="!context.playing" data-wp-on--click="actions.togglePlay" data-wp-text="state.playLabel"><?php esc_html_e( 'Pause slideshow', 'hlb-carousel' ); ?></button>
 	<?php endif; ?>
 </section>

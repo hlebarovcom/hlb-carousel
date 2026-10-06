@@ -26,11 +26,12 @@ export function gapValue( value ) {
  * @return {string} Class names.
  */
 export function wrapperClasses( attributes ) {
-	const { showArrows, arrowPlacement, showMarkers, markerStyle, markerPosition, snapAlign, oneAtATime } = attributes;
+	const { showArrows, arrowPlacement, arrowsOnHover, showMarkers, markerStyle, markerPosition, snapAlign, oneAtATime } = attributes;
 
 	return [
 		showArrows && 'has-arrows',
 		showArrows && `is-arrows-${ arrowPlacement }`,
+		showArrows && 'overlay' === arrowPlacement && arrowsOnHover && 'is-arrows-on-hover',
 		showMarkers && 'has-markers',
 		showMarkers && `is-markers-${ markerPosition }`,
 		showMarkers && `is-markers-${ markerStyle }`,

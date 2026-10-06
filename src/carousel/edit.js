@@ -43,10 +43,12 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		oneAtATime,
 		showArrows,
 		arrowPlacement,
+		arrowsOnHover,
 		showMarkers,
 		markerStyle,
 		markerPosition,
 		autoplay,
+		showPause,
 		interval,
 	} = attributes;
 
@@ -181,6 +183,15 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 							onChange={ next => setAttributes( { arrowPlacement: next } ) }
 						/>
 					) }
+					{ showArrows && 'overlay' === arrowPlacement && (
+						<ToggleControl
+							__nextHasNoMarginBottom
+							checked={ arrowsOnHover }
+							help={ __( 'On devices with a mouse. Touch screens always show the arrows.', 'hlb-carousel' ) }
+							label={ __( 'Show on hover only', 'hlb-carousel' ) }
+							onChange={ next => setAttributes( { arrowsOnHover: next } ) }
+						/>
+					) }
 				</PanelBody>
 
 				<PanelBody title={ __( 'Markers', 'hlb-carousel' ) }>
@@ -238,10 +249,19 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 					<ToggleControl
 						__nextHasNoMarginBottom
 						checked={ autoplay }
-						help={ __( 'Adds a pause button. Autoplay pauses on hover, stops on focus or interaction, and does not start for visitors who prefer reduced motion. It never runs in the editor.', 'hlb-carousel' ) }
+						help={ __( 'Autoplay pauses on hover, stops on focus or interaction, and does not start for visitors who prefer reduced motion. It never runs in the editor.', 'hlb-carousel' ) }
 						label={ __( 'Autoplay', 'hlb-carousel' ) }
 						onChange={ next => setAttributes( { autoplay: next } ) }
 					/>
+					{ autoplay && (
+						<ToggleControl
+							__nextHasNoMarginBottom
+							checked={ showPause }
+							help={ __( 'Without it, visitors can only stop autoplay by hovering, focusing or interacting with the carousel.', 'hlb-carousel' ) }
+							label={ __( 'Show pause button', 'hlb-carousel' ) }
+							onChange={ next => setAttributes( { showPause: next } ) }
+						/>
+					) }
 					{ autoplay && (
 						<RangeControl
 							__next40pxDefaultSize
@@ -259,7 +279,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 
 			<section { ...blockProps }>
 				<div { ...innerBlocksProps } />
-				{ autoplay && (
+				{ autoplay && showPause && (
 					<button className="hlb-carousel__pause" disabled type="button">
 						{ __( 'Pause slideshow', 'hlb-carousel' ) }
 					</button>

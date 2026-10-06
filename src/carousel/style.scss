@@ -435,6 +435,42 @@ $chevron-right: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 	}
 }
 
+// Overlay arrows shown on hover or keyboard focus. Touch screens always show them.
+@mixin arrow-hidden {
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+@media ( hover: hover ) and ( pointer: fine ) {
+	.wp-block-hlb-carousel.is-arrows-on-hover {
+		> .hlb-carousel__track::scroll-button(*) {
+			@include arrow-hidden;
+		}
+
+		&:is(:hover, :focus-within) > .hlb-carousel__track::scroll-button(*),
+		> .hlb-carousel__track::scroll-button(*):focus-visible {
+			opacity: 1;
+		}
+
+		> .hlb-carousel__button {
+			@include arrow-hidden;
+		}
+
+		&:is(:hover, :focus-within) > .hlb-carousel__button {
+			opacity: 1;
+		}
+
+		// Disabled arrows keep their dimmed look while revealed.
+		&:is(:hover, :focus-within) > .hlb-carousel__track::scroll-button(*):disabled {
+			opacity: var( --hlb-carousel-button-disabled-opacity );
+		}
+
+		&:is(:hover, :focus-within) > .hlb-carousel__button:disabled {
+			opacity: var( --hlb-carousel-button-disabled-opacity );
+		}
+	}
+}
+
 // Pause button: over the track, at the end corner.
 .hlb-carousel__pause {
 	z-index: 1;
@@ -466,5 +502,15 @@ $chevron-right: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 @media ( prefers-reduced-motion: reduce ) {
 	.hlb-carousel__track {
 		scroll-behavior: auto;
+	}
+
+	.wp-block-hlb-carousel.is-arrows-on-hover {
+		> .hlb-carousel__track::scroll-button(*) {
+			transition: none;
+		}
+
+		> .hlb-carousel__button {
+			transition: none;
+		}
 	}
 }

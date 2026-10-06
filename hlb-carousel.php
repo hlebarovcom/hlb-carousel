@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       HLB Carousel
  * Description:       A carousel block built on CSS scroll snap, scroll buttons and scroll markers, with a script fallback and optional autoplay.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * Author:            Hlebarov.com

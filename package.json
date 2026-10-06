@@ -1,6 +1,6 @@
 {
 	"name": "hlb-carousel",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"private": true,
 	"description": "Carousel block built on CSS scroll snap, scroll buttons and scroll markers.",
 	"license": "GPL-2.0-or-later",
