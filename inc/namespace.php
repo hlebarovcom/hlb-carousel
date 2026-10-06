@@ -9,7 +9,7 @@ declare( strict_types=1 );
 
 namespace HLB\Carousel;
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 /**
  * Hook the plugin into WordPress.

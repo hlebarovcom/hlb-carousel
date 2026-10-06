@@ -38,6 +38,8 @@ $hlb_classes = array_filter(
 		$hlb_markers ? 'is-markers-' . $hlb_style : '',
 		'is-snap-' . ( 'center' === ( $attributes['snapAlign'] ?? '' ) ? 'center' : 'start' ),
 		! empty( $attributes['oneAtATime'] ) ? 'is-one-at-a-time' : '',
+		// Front end only: the editor does not run the view script.
+		! empty( $attributes['mouseDrag'] ) ? 'is-draggable' : '',
 	]
 );
 
@@ -95,6 +97,7 @@ $hlb_context = [
 	'atStart'  => true,
 	'atEnd'    => $hlb_count < 2,
 	'autoplay' => $hlb_autoplay,
+	'drag'     => ! empty( $attributes['mouseDrag'] ),
 	'interval' => max( 3, (int) ( $attributes['interval'] ?? 6 ) ),
 	'playing'  => $hlb_autoplay,
 	'hover'    => false,

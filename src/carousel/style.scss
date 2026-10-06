@@ -216,6 +216,21 @@ $chevron-right: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 	scroll-snap-stop: always;
 }
 
+// Mouse drag (view.js). Snapping is off while dragging and settling.
+.wp-block-hlb-carousel.is-draggable.is-ready > .hlb-carousel__track {
+	cursor: grab;
+
+	&.is-dragging {
+		cursor: grabbing;
+		user-select: none;
+	}
+
+	&.is-free {
+		scroll-behavior: auto;
+		scroll-snap-type: none;
+	}
+}
+
 // CSS scroll buttons (Chrome and Edge 135+).
 .wp-block-hlb-carousel.has-arrows > .hlb-carousel__track {
 	&::scroll-button(inline-start) {

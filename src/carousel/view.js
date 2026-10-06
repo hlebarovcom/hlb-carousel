@@ -3,7 +3,8 @@
  * position, drives the fallback arrows and markers, and runs autoplay.
  *
  * CSS scroll buttons and markers need none of this; the script is what
- * makes the same controls work elsewhere, and what autoplay needs everywhere.
+ * makes the same controls work elsewhere, and what autoplay and mouse drag
+ * need everywhere.
  */
 import { getContext, getElement, store, withScope } from '@wordpress/interactivity';
 
@@ -93,6 +94,143 @@ function scrollToSlide( track, index ) {
 			behavior: behavior(),
 		} );
 	}
+}
+
+// Pixels the pointer must move before a press becomes a drag.
+const DRAG_THRESHOLD = 5;
+// A drag this long moves at least one slide, even if it ends nearer the start.
+const DRAG_FLICK = 40;
+
+/**
+ * Slide to settle on after a drag.
+ *
+ * @param {HTMLElement} track     Track.
+ * @param {number}      from      Slide current when the drag started.
+ * @param {number}      direction 1 when dragged forward, -1 back.
+ * @param {number}      distance  Scrolled distance in pixels.
+ * @return {number} Slide index.
+ */
+function dragTarget( track, from, direction, distance ) {
+	const slides = slidesOf( track );
+	const left = Math.abs( track.scrollLeft );
+	let target = from;
+	let nearest = Infinity;
+
+	slides.forEach( ( slide, index ) => {
+		const gap = Math.abs( snapLeft( track, slide ) - left );
+
+		if ( gap < nearest ) {
+			nearest = gap;
+			target = index;
+		}
+	} );
+
+	if ( target === from && distance > DRAG_FLICK ) {
+		target += direction;
+	}
+
+	if ( track.parentElement.classList.contains( 'is-one-at-a-time' ) ) {
+		target = Math.max( from - 1, Math.min( from + 1, target ) );
+	}
+
+	return Math.max( 0, Math.min( slides.length - 1, target ) );
+}
+
+/**
+ * Click-and-drag scrolling for mouse pointers. Touch and pen keep native scrolling.
+ *
+ * @param {Object}      context Carousel context.
+ * @param {HTMLElement} track   Track.
+ * @return {Function} Cleanup.
+ */
+function enableDrag( context, track ) {
+	let press = null;
+	let settle = 0;
+
+	const release = () => {
+		track.classList.remove( 'is-free' );
+		track.removeEventListener( 'scrollend', release );
+		window.clearTimeout( settle );
+	};
+
+	// Swallow the click that ends a drag, so links in slides do not open.
+	const blockClick = event => {
+		event.preventDefault();
+		event.stopPropagation();
+	};
+
+	const down = event => {
+		if ( 'mouse' !== event.pointerType || 0 !== event.button || event.target.closest( 'input, textarea, select, [contenteditable]' ) ) {
+			return;
+		}
+
+		release();
+		press = { x: event.clientX, left: track.scrollLeft, from: context.current, id: event.pointerId, dragging: false };
+	};
+
+	const move = event => {
+		if ( ! press || event.pointerId !== press.id ) {
+			return;
+		}
+
+		const dx = event.clientX - press.x;
+
+		if ( ! press.dragging ) {
+			if ( Math.abs( dx ) < DRAG_THRESHOLD ) {
+				return;
+			}
+
+			press.dragging = true;
+			track.setPointerCapture( event.pointerId );
+			track.classList.add( 'is-dragging', 'is-free' );
+			window.getSelection()?.removeAllRanges();
+		}
+
+		track.scrollLeft = press.left - dx;
+	};
+
+	const up = event => {
+		if ( ! press || event.pointerId !== press.id ) {
+			return;
+		}
+
+		const { dragging, left, from } = press;
+		press = null;
+
+		if ( ! dragging ) {
+			return;
+		}
+
+		track.classList.remove( 'is-dragging' );
+		track.addEventListener( 'click', blockClick, { capture: true, once: true } );
+		window.setTimeout( () => track.removeEventListener( 'click', blockClick, { capture: true } ) );
+
+		const moved = Math.abs( track.scrollLeft ) - Math.abs( left );
+		const target = dragTarget( track, from, Math.sign( moved ), Math.abs( moved ) );
+
+		// Snapping comes back once the scroll lands; the timeout covers no scroll at all.
+		track.addEventListener( 'scrollend', release );
+		settle = window.setTimeout( release, 1000 );
+		scrollToSlide( track, target );
+	};
+
+	// Images and links would otherwise start a native drag.
+	const noNativeDrag = event => event.preventDefault();
+
+	track.addEventListener( 'pointerdown', down );
+	track.addEventListener( 'pointermove', move );
+	track.addEventListener( 'pointerup', up );
+	track.addEventListener( 'pointercancel', up );
+	track.addEventListener( 'dragstart', noNativeDrag );
+
+	return () => {
+		release();
+		track.removeEventListener( 'pointerdown', down );
+		track.removeEventListener( 'pointermove', move );
+		track.removeEventListener( 'pointerup', up );
+		track.removeEventListener( 'pointercancel', up );
+		track.removeEventListener( 'dragstart', noNativeDrag );
+	};
 }
 
 const { state, actions } = store( 'hlb/carousel', {
@@ -254,6 +392,8 @@ const { state, actions } = store( 'hlb/carousel', {
 			} );
 			document.addEventListener( 'visibilitychange', onVisibility );
 
+			const stopDrag = context.drag ? enableDrag( context, track ) : () => {};
+
 			let timer = 0;
 
 			if ( context.autoplay ) {
@@ -274,6 +414,7 @@ const { state, actions } = store( 'hlb/carousel', {
 				visibility.disconnect();
 				document.removeEventListener( 'visibilitychange', onVisibility );
 				window.clearInterval( timer );
+				stopDrag();
 			};
 		},
 	},

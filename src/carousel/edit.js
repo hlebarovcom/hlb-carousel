@@ -41,6 +41,7 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 		perViewMobile,
 		snapAlign,
 		oneAtATime,
+		mouseDrag,
 		showArrows,
 		arrowPlacement,
 		arrowsOnHover,
@@ -146,6 +147,13 @@ export default function Edit( { attributes, setAttributes, clientId } ) {
 						help={ __( 'A swipe never skips past a slide.', 'hlb-carousel' ) }
 						label={ __( 'One slide at a time', 'hlb-carousel' ) }
 						onChange={ next => setAttributes( { oneAtATime: next } ) }
+					/>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						checked={ mouseDrag }
+						help={ __( 'Click and drag to scroll with a mouse. Touch swiping always works. Not active in the editor.', 'hlb-carousel' ) }
+						label={ __( 'Drag with mouse', 'hlb-carousel' ) }
+						onChange={ next => setAttributes( { mouseDrag: next } ) }
 					/>
 				</PanelBody>
 
